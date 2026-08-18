@@ -1,0 +1,16 @@
+name,kind,threads,input_px,dtype,fps,cpu_pct_across_cores,peak_ram_mb
+mobilenetv2/mobilenetv2_heatmap_pose_fp16,tflite,4,640,float32,1.9,180,232
+mobilenetv2/mobilenetv2_heatmap_pose_fp16,tflite,8,640,float32,1.8,215,232
+mobilenetv2/mobilenetv2_heatmap_pose_fp16,tflite,16,640,float32,1.9,336,233
+mobilenetv2/mobilenetv2_pose_fp16,tflite,4,224,float32,188.5,400,69
+mobilenetv2/mobilenetv2_pose_fp16,tflite,8,224,float32,229.7,796,69
+mobilenetv2/mobilenetv2_pose_fp16,tflite,16,224,float32,134.4,1507,68
+yolo11m/yolo11m_pose_1280,ncnn,4,1280,ncnn,0.3,659,2313
+yolo11m/yolo11m_pose_1280,ncnn,8,1280,ncnn,0.3,645,2310
+yolo11m/yolo11m_pose_1280,ncnn,16,1280,ncnn,0.3,661,2309
+yolo11n/320,ncnn,4,320,ncnn,50.9,797,551
+yolo11n/320,ncnn,8,320,ncnn,35.6,798,548
+yolo11n/320,ncnn,16,320,ncnn,52.3,800,551
+yolo11n/640,ncnn,4,640,ncnn,10.3,798,629
+yolo11n/640,ncnn,8,640,ncnn,10.3,796,629
+yolo11n/640,ncnn,16,640,ncnn,10.4,796,630
