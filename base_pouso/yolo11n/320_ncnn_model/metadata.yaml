@@ -1,7 +1,7 @@
 description: Ultralytics YOLO11n-pose model trained on /kaggle/working/data.yaml
 author: Ultralytics
-date: '2026-08-14T23:15:34.432405+00:00'
-version: 8.4.120
+date: '2026-08-22T00:36:02.554947+00:00'
+version: 8.4.126
 license: AGPL-3.0 License (https://ultralytics.com/license)
 docs: https://docs.ultralytics.com
 stride: 32
