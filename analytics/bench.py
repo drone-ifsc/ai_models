@@ -101,15 +101,15 @@ def _ncnn_imgsz(d):
         s = meta.get("imgsz")
         return int(s[0] if isinstance(s, (list, tuple)) else s)
     except Exception:
-        nums = re.findall(r"\d+", os.path.basename(d))  # last number, e.g. ..._1280_ncnn_model
+        nums = re.findall(r"\d+", os.path.relpath(d, AI_ROOT))  # last number, e.g. yolo11m/1280/base_pouso_ncnn_model
         return int(nums[-1]) if nums else 640
 
 
 def clean_name(relpath):
     n = relpath
-    for suf in ("_ncnn_model", ".tflite"):
-        if n.endswith(suf):
-            n = n[: -len(suf)]
+    n = re.sub(r"/[^/]*_ncnn_model$", "", n)  # yolo11n/640/base_pouso_ncnn_model -> yolo11n/640
+    if n.endswith(".tflite"):
+        n = n[: -len(".tflite")]
     if n.startswith("base_pouso/"):
         n = n[len("base_pouso/"):]
     return n

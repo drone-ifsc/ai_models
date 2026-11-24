@@ -1,0 +1,5 @@
+path: /kaggle/working/dataset
+train: images/train
+val: images/val
+names:
+  0: lipo_bag

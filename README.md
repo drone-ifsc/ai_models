@@ -9,16 +9,35 @@ Raspberry Pi companion computer, in the IFSC's CCD and CBR competition stack,
 but nothing here is tied to that stack: a model file, OpenCV and either `ultralytics`
 or `tflite-runtime` are enough.
 
+Layout: `<task>/<model>/<imgsz>/<format>` — files are named after the detected object:
+`<object>.pt` / `.onnx` / `.tflite`, and the ncnn export is the folder `<object>_ncnn_model/`
+(Ultralytics recognizes an ncnn model only by the `_ncnn_model` suffix in the folder name).
+
 ```
-base_pouso/                                        # task: landing base ("base de pouso")
-  yolo11n/640_ncnn_model/                          # ncnn, imgsz 640, fp16      ~5 MB   <- runtime
-  yolo11m/yolo11m_pose_1280.pt                     # PyTorch, imgsz 1280        ~40 MB  <- teacher
-          yolo11m_pose_1280_last.pt                # last epoch (same run)      ~40 MB
-          yolo11m_pose_1280_ncnn_model/            # ncnn export of the above   ~80 MB
-  mobilenetv2/mobilenetv2_heatmap_pose_fp16.tflite # TFLite fp16, 640x640       ~15 MB
-              mobilenetv2_pose_fp16.tflite         # TFLite fp16, 224x224       ~5 MB
-pacote/                                            # reserved: future "package" task
+base_pouso/                                       # task: landing base ("base de pouso")
+  yolo11n/320/base_pouso.pt                       # PyTorch                    ~5 MB
+              base_pouso_ncnn_model/              # ncnn, fp32                 ~11 MB
+  yolo11n/640/base_pouso_ncnn_model/              # ncnn, fp16                 ~5 MB   <- runtime
+  yolo11m/1280/base_pouso.pt                      # PyTorch                    ~40 MB  <- teacher
+               base_pouso_last.pt                 # last epoch (same run)      ~40 MB
+               base_pouso_ncnn_model/             # ncnn export of the above   ~80 MB
+  mobilenetv2/640/base_pouso_heatmap_fp16.tflite  # TFLite fp16                ~15 MB
+  mobilenetv2/224/base_pouso_fp16.tflite          # TFLite fp16                ~5 MB
+  yolo8n/640/yolov8n.pt, .onnx, .engine           # stock COCO YOLOv8n, not trained on the base
+pacote/                                           # task: package (lipo bag), class 0: lipo_bag
+  yolo11n/640/lipo_bag.pt                         # PyTorch                    ~5 MB
+  yolo11n/960/lipo_bag.pt                         # PyTorch                    ~5 MB
+              lipo_bag.onnx                       # ONNX, fp32                 ~11 MB
+              lipo_bag_ncnn_model/                # ncnn, fp16                 ~5 MB
+gauge/                                            # task: gauge (manometer), class 0: gauge, 2 kpts
+  yolo11n/992/gauge_ncnn_model/                   # ncnn, fp16                 ~6 MB
+  yolo11n/1216/gauge.pt                           # PyTorch                    ~6 MB
+               gauge_ncnn_model/                  # ncnn, fp16                 ~6 MB
+               results.csv                        # training log of this run
 ```
+
+The `gauge/` models are copies of the gauge-reader models from `eletroquad2026/gauge_reader`
+(same weights, byte-identical); everything below this point is about `base_pouso/`.
 
 ## What these models are
 
@@ -35,10 +54,10 @@ it correct under horizontal-flip augmentation).
 
 | model | arch | input | format | output | detection conf? |
 |---|---|---|---|---|---|
-| `yolo11n/640_ncnn_model` | YOLO11n-pose | 640×640 | ncnn (fp16) | boxes + 5 kpts in **frame pixels** | yes (box + per-kpt) |
-| `yolo11m/yolo11m_pose_1280.pt` | YOLO11m-pose | 1280×1280 | PyTorch (+ncnn) | boxes + 5 kpts in **frame pixels** | yes (box + per-kpt) |
-| `mobilenetv2/..._heatmap_pose_fp16.tflite` | MobileNetV2 + 2× Conv2DTranspose → 80×80×5 heatmaps → soft-argmax | 640×640 | TFLite fp16 | `(1, 5, 2)`, **normalized [0,1]** | **no** |
-| `mobilenetv2/mobilenetv2_pose_fp16.tflite` | MobileNetV2 + GAP → Dense regression | 224×224 | TFLite fp16 | `(1, 10)`, **normalized [0,1]** | **no** |
+| `yolo11n/640/base_pouso_ncnn_model` | YOLO11n-pose | 640×640 | ncnn (fp16) | boxes + 5 kpts in **frame pixels** | yes (box + per-kpt) |
+| `yolo11m/1280/base_pouso.pt` | YOLO11m-pose | 1280×1280 | PyTorch (+ncnn) | boxes + 5 kpts in **frame pixels** | yes (box + per-kpt) |
+| `mobilenetv2/640/base_pouso_heatmap_fp16.tflite` | MobileNetV2 + 2× Conv2DTranspose → 80×80×5 heatmaps → soft-argmax | 640×640 | TFLite fp16 | `(1, 5, 2)`, **normalized [0,1]** | **no** |
+| `mobilenetv2/224/base_pouso_fp16.tflite` | MobileNetV2 + GAP → Dense regression | 224×224 | TFLite fp16 | `(1, 10)`, **normalized [0,1]** | **no** |
 
 The two MobileNetV2 files have **no detector head**: they always return 5 points, even on
 a frame with no base in it — you must add your own plausibility check. Decoding
@@ -113,7 +132,7 @@ import numpy as np
 from ultralytics import YOLO
 
 # Point at the ncnn *directory*, not a file. task="pose" is required for ncnn.
-model = YOLO("base_pouso/yolo11n/640_ncnn_model", task="pose")
+model = YOLO("base_pouso/yolo11n/640/base_pouso_ncnn_model", task="pose")
 
 frame = cv2.imread("frame.jpg")                       # BGR, any resolution
 res = model(np.ascontiguousarray(frame), imgsz=640, conf=0.8, verbose=False)[0]
@@ -146,7 +165,7 @@ letterbox undo needed.
 ```python
 from ultralytics import YOLO
 
-model = YOLO("base_pouso/yolo11m/yolo11m_pose_1280.pt")
+model = YOLO("base_pouso/yolo11m/1280/base_pouso.pt")
 
 # stream=True keeps memory flat over long folders
 for res in model.predict("images/", imgsz=1280, conf=0.5, stream=True, verbose=False):
@@ -174,8 +193,8 @@ try:
 except ImportError:
     from tensorflow.lite import Interpreter                 # desktop fallback
 
-MODEL = "base_pouso/mobilenetv2/mobilenetv2_heatmap_pose_fp16.tflite"
-# MODEL = "base_pouso/mobilenetv2/mobilenetv2_pose_fp16.tflite"   # 224px, same code
+MODEL = "base_pouso/mobilenetv2/640/base_pouso_heatmap_fp16.tflite"
+# MODEL = "base_pouso/mobilenetv2/224/base_pouso_fp16.tflite"   # 224px, same code
 
 itp = Interpreter(model_path=MODEL, num_threads=4)          # ~physical cores; more oversubscribes
 itp.allocate_tensors()
